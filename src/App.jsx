@@ -9,6 +9,8 @@ import {
   AiOutlineReload,
   AiOutlineSearch,
 } from "react-icons/ai";
+import { Bar } from "./components/Bar";
+import { Search } from "./components/Search";
 
 const FILMS_QUERY = gql`
   {
@@ -33,11 +35,13 @@ const FILMS_QUERY = gql`
 function App() {
   const [state, setState] = useState({
     data: [],
+    search: [],
     date: [],
+    onSearch: false,
   });
   const { data, loading, error } = useQuery(FILMS_QUERY);
 
-  useEffect(() => {
+  const formatData = (data) => {
     let finalObj = {};
     data?.launchesPast.forEach((item) => {
       const date = item.launch_date_local.split("T")[0];
@@ -47,21 +51,54 @@ function App() {
         finalObj[date] = [item];
       }
     });
+
+    return finalObj;
+  };
+
+  const filterSearch = (val) => {
+    const filter = Object.values(state.data)
+      .filter((items) =>
+        items.mission_name
+          .toLowerCase()
+          .includes(val.toLowerCase())
+      )
+      .map((item) => item);
+
+    // console.log(filter);
+
+    if (filter === []) {
+      setState((prevState) => ({
+        ...prevState,
+        search: filter,
+        onSearch: false,
+      }));
+    } else {
+      setState((prevState) => ({
+        ...prevState,
+        search: filter,
+        onSearch: true,
+      }));
+    }
+  };
+
+  useEffect(() => {
     // console.log(finalObj);
+    let finalObj = {};
+    let final = [];
+    data?.launchesPast.forEach((item) => {
+      final.push(item);
+    });
+
+    // console.log(final);
 
     setState((prevState) => ({
       ...prevState,
-      data: finalObj,
+      data: final,
       date: Object.keys(finalObj),
     }));
 
-    // setState((prevState) => ({
-    //   ...prevState,
-    //   data: data,
-    //   date: Object.keys(finalObj),
-    // }));
+    // console.log(state);
   }, [loading]);
-  console.log(state);
 
   if (loading)
     return (
@@ -88,67 +125,24 @@ function App() {
       <div className="search">
         <div className="search-bar">
           <AiOutlineSearch fontSize={30} />
-          <input
-            type="text"
-            placeholder="Search"
-            onChange={(event) => {
-              // var filter = Object.values(state.data.mission_name).filter(items => items.toLowerCase().includes((event.target.value.toLowerCase()))).map(items => items);
-              var filter = Object.values(state.data).filter(items => items[0].id.includes(event.target.value)).map(items => items);
-              console.log(filter)
-              setState(prevState => ({
-                ...prevState,
-                data: filter
-              }))
-            }}
-          />
+          <input type="text" placeholder="Search" onChange={(event) => filterSearch(event.target.value)} />
         </div>
         <div>
-          <Filter />
+          <Filter
+            onClick={(val) => filterSearch(val)}
+          />
         </div>
       </div>
 
       <div className="data-section">
-        {Object.keys(state.data).map((date, i) => {
-          return (
-            <div className="bar">
-              <div className="date">{date}</div>
-              {Object.values(state.data).map((item, j) => {
-                // console.log(item[0].launch_date_local.split("T")[0] === date)
-                if (item[0].launch_date_local.split("T")[0] === date) {
-                  return (
-                    <div className="data">
-                      <p>{item[0].id}</p>
-                      <div className="info">
-                        <p>{item[0].mission_name}</p>
-                        <p>{item[0].launcher}</p>
-                        <p>{item[0].launch_site.site_name_long}</p>
-                        <a target="_blank" href={item[0].links.video_link}>
-                        <AiOutlineLink fontSize={20}/>
-
-                        </a>
-                      </div>
-                    </div>
-                  );
-                }
-              })}
-            </div>
-          );
-        })}
+        {!state.onSearch ? (
+          <Bar data={state.data} />
+        ) : (
+          <Search data={state.search} />
+        )}
       </div>
     </div>
   );
 }
 
 export default App;
-
-// <div>
-//               {item}
-//               {Object.values(state.data).map((x, i) => {
-//                 return <div className="item">
-//                   <p>{x[i].id}</p>
-//                   <div className="info">
-//                   {x[i].mission_name}
-//                   </div>
-//                 </div>
-//               })}
-//             </div>
